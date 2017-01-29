@@ -33,6 +33,7 @@ details, including usage examples and installation instructions.
                             Truncate possibly fixated (erroneous) markers.
                             Default: true
       -np, --noPlot         Turn off plotting output.. Default: false
+      --noPoints            Hide raw data points in plotting output.
       --plotFile PLOTFILE   Write plotting output to file.
       -o OUTFILE, --output OUTFILE
                             Output file for bin-level statistics

@@ -12,6 +12,28 @@ import numpy, scipy.stats
 
 VERSION = "0.10.2"
 
+def create_palette(n):
+    """Create RGBA palette of specified size."""
+
+    from scipy.constants import golden_ratio as phi
+    from colorsys import hls_to_rgb
+
+    theta = 1.0 / pow(phi, 2) # golden angle as fraction of full circle
+    alpha = 1.0               # fixed opacity
+    hue = 0.0                 # initial hue
+    saturation = 0.6          # fixed saturation
+    lightness = 0.4           # fixed lightness
+
+    # Generate palette from hue-saturation-lightness (HSL) space,
+    # shifting hue by theta so as to avoid clashing RGBA values.
+    palette = list()
+    for i in range(n):
+        rgb = hls_to_rgb(hue, lightness, saturation)
+        palette.append(rgb + (alpha,))
+        hue += theta
+
+    return palette
+
 def load_table(fin, binsize, verbose, filt):
     temp = collections.defaultdict(lambda : numpy.zeros(2))
     binsize = int(binsize)
@@ -275,9 +297,9 @@ def parseArgs():
     parser.add_argument("-c", "--centimorgan", type=float, default=3300, help="Length of a centimorgan, in base pairs.  Default: 3300 (yeast average)", dest="cM")
     parser.add_argument("-t", "--truncate", type=bool, default=True, help="Truncate possibly fixated (erroneous) markers.  Default: true", dest="filter")
     
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-np", "--noPlot", action="store_true", default=False, help="Turn off plotting output.  Default: false", dest="noPlot")
-    group.add_argument("--plotFile", help="Write plotting output to file.")
+    parser.add_argument("-np", "--noPlot", action="store_true", default=False, help="Turn off plotting output.  Default: false", dest="noPlot")
+    parser.add_argument("--noPoints", action="store_true", help="Hide raw data points in plotting output.")
+    parser.add_argument("--plotFile", help="Write plotting output to file.")
 
     parser.add_argument("-o", "--output", type=argparse.FileType("w"), default=None, help="Output file for bin-level statistics", dest="outFile")
 
@@ -286,35 +308,41 @@ def parseArgs():
     return parser.parse_args()
 
 def doPlotting(y, y2, d, d2, LOD, mu_MLE, mu_pstr, mu_pstr2, V_pstr, V_pstr2,
-    left, right, bins, plotFile=None):
+    left, right, bins, plotFile=None, noPoints=False):
     import pylab
     X = bins[:-1] + 0.5*res # bin mid-points
 
+    num_colors = len(y2) + 1 if y2 is not None else 1
+    palette = create_palette(num_colors)
+
     if y2 is not None:
         old = numpy.seterr(all="ignore")
-        for curr_y2, curr_d2, curr_mu_pstr2, in zip(y2, d2, mu_pstr2):
-            pylab.plot(X, curr_y2/curr_d2 , "+", alpha=0.6)
-            pylab.plot(X, curr_mu_pstr2/N, lw=2)
+        for curr_y2, curr_d2, curr_mu_pstr2, color in zip(y2, d2, mu_pstr2, palette[1:]):
+            if not noPoints:
+                pylab.plot(X, curr_y2/curr_d2 , "+", color=color, alpha=0.6)
         numpy.seterr(**old)
 
     old = numpy.seterr(all="ignore")
-    pylab.plot(X, y/d, "r+", alpha=0.6)
+    if not noPoints:
+        pylab.plot(X, y/d, "+", color=palette[0], alpha=0.6)
     numpy.seterr(**old)
-
-    pylab.xlabel("bp (%d bp loci)" % res)
-    pylab.ylabel("Allele frequency")
 
     if y2 is not None:
         for val, alpha in [(0.025, 0.3), (0.005, 0.1), (0.0005, 0.05)]:
-            for curr_mu_pstr2, curr_V_pstr2 in zip(mu_pstr2, V_pstr2):
+            for curr_mu_pstr2, curr_V_pstr2, color in zip(mu_pstr2, V_pstr2, palette[1:]):
                 CI = scipy.stats.norm.isf(val, 0, numpy.sqrt(curr_V_pstr2))
-                # pylab.fill_between(X, (curr_mu_pstr2 - CI)/N, (curr_mu_pstr2 + CI)/N, alpha=alpha)
-                pylab.fill_between(X, (curr_mu_pstr2 - CI)/N, (curr_mu_pstr2 + CI)/N, color='r', alpha=alpha)
-    else:
-        for val, alpha in [(0.025, 0.3), (0.005, 0.1), (0.0005, 0.05)]:
-            CI = scipy.stats.norm.isf(val, 0, numpy.sqrt(V_pstr))
-            # pylab.fill_between(X, (mu_MLE - CI)/N, (mu_MLE + CI)/N, color='r', alpha=alpha)
-            pylab.fill_between(X, (mu_pstr - CI)/N, (mu_pstr + CI)/N, color='r', alpha=alpha)
+                # pylab.fill_between(X, (curr_mu_pstr2 - CI)/N, (curr_mu_pstr2 + CI)/N, color=color, alpha=alpha)
+                pylab.fill_between(X, (curr_mu_pstr2 - CI)/N, (curr_mu_pstr2 + CI)/N, color=color, alpha=alpha)
+                pylab.plot(X, curr_mu_pstr2/N, color=color, lw=2)
+
+    for val, alpha in [(0.025, 0.3), (0.005, 0.1), (0.0005, 0.05)]:
+        CI = scipy.stats.norm.isf(val, 0, numpy.sqrt(V_pstr))
+        # pylab.fill_between(X, (mu_MLE - CI)/N, (mu_MLE + CI)/N, color=palette[0], alpha=alpha)
+        pylab.fill_between(X, (mu_pstr - CI)/N, (mu_pstr + CI)/N, color=palette[0], alpha=alpha)
+    pylab.plot(X, mu_pstr/N, color=palette[0], lw=2)
+
+    pylab.xlabel("bp (%d bp loci)" % res)
+    pylab.ylabel("Allele frequency")
 
     pylab.axhline(0.5, color='k', ls=':')
               
@@ -324,7 +352,7 @@ def doPlotting(y, y2, d, d2, LOD, mu_MLE, mu_pstr, mu_pstr2, V_pstr, V_pstr2,
 
     pylab.twinx()
     pylab.ylabel("LOD score")
-    pylab.plot(X, LOD, 'g-', lw=2)
+    pylab.plot(X, LOD, "k-", lw=2)
 
     if N < 10000:
         posteriors = numpy.zeros((N,T))
@@ -435,11 +463,13 @@ def doComputation(y, y_var, y2, y_var2, d, d2, T, bins):
 if __name__ == "__main__":
     args = parseArgs()
 
+    noPlot = args.noPlot
+
     print >>sys.stderr, "Multipool version:", VERSION
     print >>sys.stderr, "Python version:", sys.version
     print >>sys.stderr, "Scipy version:", scipy.__version__
     print >>sys.stderr, "Numpy version:", numpy.__version__
-    if not args.noPlot:
+    if not noPlot:
         import matplotlib
         print >>sys.stderr, "Matplotlib version:", matplotlib.__version__
 
@@ -447,6 +477,10 @@ if __name__ == "__main__":
     res = args.res
     p = res/100.0/args.cM
     plotFile = args.plotFile
+    noPoints = args.noPoints
+
+    if noPlot and (plotFile is not None or noPoints is True):
+        raise RuntimeError("plotting arguments not allowed in 'noPlot' mode")
 
     REPLICATES = (args.mode == "replicates")
 
@@ -462,6 +496,6 @@ if __name__ == "__main__":
     if args.outFile is not None:
         doOutput(args.outFile, T, res, LOD, mu_MLE, N, bins)
 
-    if not args.noPlot:
+    if not noPlot:
         doPlotting(y, y2, d, d2, LOD, mu_MLE, mu_pstr, mu_pstr2, V_pstr, V_pstr2,
-            left, right, bins, plotFile=plotFile)
+            left, right, bins, plotFile=plotFile, noPoints=noPoints)
