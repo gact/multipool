@@ -417,12 +417,18 @@ def doComputation(y, y_var, y2, y_var2, d, d2, T, bins):
 
     D = 30 # Assume that contributions to the location are effectively
            # zero when you go this many bins away.
-    try:
-        i = max(maxIndex - D, 0) # bound at zero
-        j = min(maxIndex + D + 1, T) # bound at T
-        print >>sys.stderr, "Sublocalized best location:", numpy.sum(bins[i:j]*numpy.exp(LOD[i:j])) / numpy.sum(numpy.exp(LOD[i:j]))
-    except ValueError:
-        pass
+    
+    i = maxIndex - D
+    j = maxIndex + D + 1
+    
+    # If sublocalized best location is sufficiently
+    # distant from terminal bins, output location..
+    if i >= 0 and j <= T:
+        sbl = numpy.sum(bins[i:j]*numpy.exp(LOD[i:j])) / numpy.sum(numpy.exp(LOD[i:j]))
+    # ..otherwise output NaN value.
+    else:
+        sbl = numpy.nan
+    print >>sys.stderr, "Sublocalized best location:", sbl
 
     return LOD, mu_MLE, mu_pstr, mu_pstr2, V_pstr, V_pstr2, left90, right90
     
