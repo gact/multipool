@@ -10,7 +10,7 @@ about = {
     "license":          "MIT",
     "url":              "https://github.com/matted/multipool",
     "packages":         [],
-    "scripts":          ["mp_inference.py"],
+    "scripts":          ["mp_inference.py", "mp_prep.py"],
     "zip_safe":         True,
     "install_requires": ["scipy", "numpy"] # pylab is optional; leaving it out for now
 }
