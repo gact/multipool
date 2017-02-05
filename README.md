@@ -47,4 +47,5 @@ indel).  The first column reports the locus position in base pairs
 (used with the --centimorgan parameter to compute crossover
 probabilities).  The second column reports the number of sequencing
 reads from the first analyzed strain and the third column reports the
-read count from the second strain.
+read count from the second strain. An allele count file can be created
+from VCF input using the Multipool prep script `mp_prep.py`.
