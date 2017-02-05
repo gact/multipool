@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 #
 # Multipool: Efficient multi-locus genetic mapping with pooled sequencing
 # 
