@@ -11,7 +11,7 @@
 import argparse, collections, sys, logging
 import numpy, scipy.stats
 
-VERSION = "0.10.2"
+from about import about
 
 def create_palette(n):
     """Create RGBA palette of specified size."""
@@ -289,7 +289,7 @@ def doOutput(fout, T, res, LOD, mu_MLE, N, bins):
     fout.flush()
 
 def parseArgs():
-    parser = argparse.ArgumentParser(description="Multipool: Efficient multi-locus genetic mapping with pooled sequencing, version %s.  See http://cgs.csail.mit.edu/multipool/ for more details." % VERSION)
+    parser = argparse.ArgumentParser(description="Multipool: Efficient multi-locus genetic mapping with pooled sequencing, version %s.  See http://cgs.csail.mit.edu/multipool/ for more details." % about['version'])
 
     parser.add_argument("fins", metavar="countfile", type=argparse.FileType("r"), nargs="+", help="Input file[s] of allele counts")
     parser.add_argument("-n", "--individuals", type=int, help="Individuals in each pool (required)", required=True, dest="N")
@@ -304,7 +304,7 @@ def parseArgs():
 
     parser.add_argument("-o", "--output", type=argparse.FileType("w"), default=None, help="Output file for bin-level statistics", dest="outFile")
 
-    parser.add_argument("-v", "--version", action="version", version="%(prog)s " + VERSION)
+    parser.add_argument("-v", "--version", action="version", version="%(prog)s " + about['version'])
 
     return parser.parse_args()
 
@@ -466,7 +466,7 @@ if __name__ == "__main__":
 
     noPlot = args.noPlot
 
-    print >>sys.stderr, "Multipool version:", VERSION
+    print >>sys.stderr, "Multipool version:", about['version']
     print >>sys.stderr, "Python version:", sys.version
     print >>sys.stderr, "Scipy version:", scipy.__version__
     print >>sys.stderr, "Numpy version:", numpy.__version__
