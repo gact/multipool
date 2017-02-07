@@ -142,7 +142,7 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info):
                 # Check for multiple records describing the same variant.
                 if contig in d and pos in d[contig]:
                     raise RuntimeError("multiple records describe the same "
-                        "variant at {!r} in pool sample {!r}".format(
+                        "variant at '{}' in pool sample '{}'".format(
                         '{}:{}'.join(contig, pos), pool))
 
                 # Skip if variant is not a SNP.
@@ -222,7 +222,7 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info):
     for region in regions:
         if region not in allele_depth_info:
             raise RuntimeError("pool allele depths not found "
-                "for region {!r}".format(region))
+                "for region '{}'".format(region))
 
     return allele_depth_info
 
@@ -257,7 +257,7 @@ def get_founder_allele_info(founders, region, sample_file_info):
                         # Check for multiple records describing the same variant.
                         if contig in d and pos in d[contig] and founder in d[contig][pos]:
                             raise RuntimeError("multiple records describe the "
-                                "same variant at {!r} in founder {!r}".format(
+                                "same variant at '{}' in founder '{}'".format(
                                 '{}:{}'.join(contig, pos), founder))
 
                         # Skip if variant is not a SNP.
@@ -305,7 +305,7 @@ def get_founder_allele_info(founders, region, sample_file_info):
     for region in regions:
         if region not in founder_allele_info:
             raise RuntimeError("founder alleles not found "
-                "for region {!r}".format(region))
+                "for region '{}'".format(region))
 
     return founder_allele_info
 
@@ -322,7 +322,7 @@ def get_sample_file_info(samples, input_files):
 
     for sample in samples:
         if sample not in sample_file_info:
-            raise RuntimeError("sample {!r} not found "
+            raise RuntimeError("sample '{}' not found "
                 "in input variant data".format(sample))
 
     return sample_file_info
@@ -400,10 +400,10 @@ if __name__ == "__main__":
 
     for input_file in input_files:
         if not os.path.exists(input_file):
-            raise RuntimeError("input file not found: {!r}".format(input_file))
+            raise RuntimeError("input file not found: {}".format(input_file))
 
     if pool in founders:
-        raise RuntimeError("cannot set sample {!r} as both pool and founder".format(pool))
+        raise RuntimeError("cannot set sample '{}' as both pool and founder".format(pool))
 
     if len(founders) != 2:
         raise ValueError("please specify two founder samples")
