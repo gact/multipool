@@ -121,6 +121,9 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
     allele_depth_info = OrderedDict()
     expected_tagset = None
 
+    num_variants = num_snps = num_matching_loci = num_matching_alleles = 0
+    num_allele_depths = None
+
     # Get allele depth of each observed biallelic
     # pool SNP in the given region(s) of interest.
     for input_file in sample_file_info[pool]:
@@ -139,6 +142,8 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
                 if contig != region:
                     continue
 
+                num_variants += 1
+
                 # Check for multiple records describing the same variant.
                 if contig in d and pos in d[contig]:
                     raise RuntimeError("multiple records describe the same "
@@ -148,6 +153,8 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
                 # Skip if variant is not a SNP.
                 if any( a not in ('A', 'C', 'G', 'T') for a in alleles ):
                     continue
+
+                num_snps += 1
 
                 # Get full set of genotype subfield tags for this record.
                 record_tagset = set(record.format)
@@ -195,6 +202,8 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
             if contig not in founder_allele_info or pos not in founder_allele_info[contig]:
                 continue
 
+            num_matching_loci += 1
+
             # Get founder alleles at this variant locus.
             founder_alleles = founder_allele_info[contig][pos]
 
@@ -215,14 +224,29 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
             if sum( d[contig][pos].values() ) > 0:
                 continue
 
+            num_matching_alleles += 1
+
             allele_depth_info.setdefault(contig, dict())
             allele_depth_info[contig][pos] = variant_depths
+
+    num_allele_depths = num_matching_alleles
 
     # Check that pool allele depths were found for region(s) of interest.
     for region in regions:
         if region not in allele_depth_info:
             raise RuntimeError("pool allele depths not found "
                 "for region '{}'".format(region))
+
+    if not quiet:
+        print >> sys.stderr, ( "Found {} variants in region '{}' of pool "
+            "sample '{}'...".format(num_variants, region, pool) )
+        print >> sys.stderr, ( "Of these, {} are SNPs...".format(num_snps) )
+        print >> sys.stderr, ( "Of these, {} have a locus matching a founder "
+            "SNP...".format(num_matching_loci) )
+        print >> sys.stderr, ( "Of these, {} have observed alleles matching "
+            "a founder SNP...".format(num_matching_alleles) )
+        print >> sys.stderr, ( "Pool allele depths obtained for {} "
+            "variants...".format(num_allele_depths) )
 
     return allele_depth_info
 
@@ -231,12 +255,18 @@ def get_founder_allele_info(founders, region, sample_file_info, quiet=False):
 
     founder_allele_info = defaultdict( lambda: defaultdict(set) )
 
+    num_allele_sets = None
+
     # If two founder samples are specified, get homozygous genotypes from
     # the given regions of interest that are segregating with respect to
     # the specified founder samples..
     if len(founders) == 2:
 
         d = defaultdict( lambda: defaultdict( lambda: defaultdict(set)) )
+
+        variant_loci, snp_loci, homozygous_loci = [
+            { f: set() for f in founders } for _ in range(3) ]
+        num_segregating = 0
 
         for founder in founders:
 
@@ -254,6 +284,8 @@ def get_founder_allele_info(founders, region, sample_file_info, quiet=False):
                         if contig != region:
                             continue
 
+                        variant_loci[founder].add( (contig, pos) )
+
                         # Check for multiple records describing the same variant.
                         if contig in d and pos in d[contig] and founder in d[contig][pos]:
                             raise RuntimeError("multiple records describe the "
@@ -263,6 +295,8 @@ def get_founder_allele_info(founders, region, sample_file_info, quiet=False):
                         # Skip if variant is not a SNP.
                         if any( a not in ('A', 'C', 'G', 'T') for a in alleles ):
                             continue
+
+                        snp_loci[founder].add( (contig, pos) )
 
                         try: # Get founder allele indices.
                             allele_indices = [ i for i in set(
@@ -280,6 +314,8 @@ def get_founder_allele_info(founders, region, sample_file_info, quiet=False):
                         if len(founder_alleles) != 1:
                             continue
 
+                        homozygous_loci[founder].add( (contig, pos) )
+
                         # Set founder allele symbol for this variant.
                         d[contig][pos][founder] = founder_alleles[0]
 
@@ -296,6 +332,23 @@ def get_founder_allele_info(founders, region, sample_file_info, quiet=False):
 
                     if len(set(homolog_alleles)) == len(homolog_alleles):
                         founder_allele_info[contig][pos] = homolog_alleles
+                        num_segregating += 1
+
+        # Combine founder variant counts.
+        f0, f1 = founders
+        num_variants = len( variant_loci[f0] & variant_loci[f1] )
+        num_snps = len( snp_loci[f0] & snp_loci[f1] )
+        num_homozygous = len( homozygous_loci[f0] & homozygous_loci[f1] )
+
+        if not quiet:
+            print >> sys.stderr, ( "Found {} variants in region '{}' of founders "
+                "'{}' and '{}'...".format(num_variants, region, *founders) )
+            print >> sys.stderr, "Of these, {} are SNPs...".format(num_snps)
+            print >> sys.stderr, "Of these, {} have homozygous genotypes...".format(num_homozygous)
+            print >> sys.stderr, ( "Of these, {} are segregating with respect to "
+                "founders '{}' and '{}'...".format(num_segregating, *founders) )
+
+        num_allele_sets = num_segregating
 
     else:
         raise RuntimeError("cannot get founder alleles for {} "
@@ -306,6 +359,10 @@ def get_founder_allele_info(founders, region, sample_file_info, quiet=False):
         if region not in founder_allele_info:
             raise RuntimeError("founder alleles not found "
                 "for region '{}'".format(region))
+
+    if not quiet:
+        print >> sys.stderr, ( "Founder allele sets obtained for {} "
+            "variants...".format(num_allele_sets) )
 
     return founder_allele_info
 
@@ -321,9 +378,14 @@ def get_sample_file_info(samples, input_files, quiet=False):
                     sample_file_info[sample].append(input_file)
 
     for sample in samples:
-        if sample not in sample_file_info:
-            raise RuntimeError("sample '{}' not found "
-                "in input variant data".format(sample))
+        try:
+            sample_files = sample_file_info[sample]
+        except KeyError:
+            raise RuntimeError("sample '{}' not found in input file(s)".format(sample))
+        else:
+            if not quiet:
+                print >> sys.stderr, ( "Sample '{}' found in input file(s):"
+                    " {}".format(sample, os.pathsep.join(sample_files) ) )
 
     return sample_file_info
 
@@ -425,7 +487,7 @@ if __name__ == "__main__":
     if not quiet:
         print >> sys.stderr, "Getting founder allele info..."
     founder_allele_info = get_founder_allele_info(founders, region,
-        sample_file_info, quiet=quiet)
+            sample_file_info, quiet=quiet)
 
     if not quiet:
         print >> sys.stderr, "Getting pool allele depths..."
