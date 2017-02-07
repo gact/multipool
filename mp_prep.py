@@ -191,11 +191,12 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info):
 
         for pos in d[contig]:
 
-            # Get founder alleles for this variant.
-            try:
-                founder_alleles = founder_allele_info[contig][pos]
-            except KeyError: # no founder alleles available for variant
+            # Skip if no founder variant at this locus.
+            if contig not in founder_allele_info or pos not in founder_allele_info[contig]:
                 continue
+
+            # Get founder alleles at this variant locus.
+            founder_alleles = founder_allele_info[contig][pos]
 
             # Get variant allele depths with respect to each founder allele.
             variant_depths = list()
