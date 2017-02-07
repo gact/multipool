@@ -115,7 +115,7 @@ def doOutput(allele_depth_info, output_file):
                 line = ' '.join( str(x) for x in data )
                 fh.write('{}\n'.format(line))
 
-def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info):
+def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, quiet=False):
     """Get dictionary of allele depth info from input variant files."""
 
     allele_depth_info = OrderedDict()
@@ -226,7 +226,7 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info):
 
     return allele_depth_info
 
-def get_founder_allele_info(founders, region, sample_file_info):
+def get_founder_allele_info(founders, region, sample_file_info, quiet=False):
     """Get dictionary of founder allele info from input variant files."""
 
     founder_allele_info = defaultdict( lambda: defaultdict(set) )
@@ -309,7 +309,7 @@ def get_founder_allele_info(founders, region, sample_file_info):
 
     return founder_allele_info
 
-def get_sample_file_info(samples, input_files):
+def get_sample_file_info(samples, input_files, quiet=False):
     """Get mapping of sample names to variant files."""
 
     sample_file_info = defaultdict(list)
@@ -360,6 +360,9 @@ def parseArgs():
     parser.add_argument("-o", "--output", dest="outfile", metavar="FILE",
         type=str, help="Output file of allele counts.")
 
+    parser.add_argument('--quiet', action='store_true',
+        help="Do not write status updates to standard error.")
+
     parser.add_argument("-v", "--version", action="version",
         version="%(prog)s {}".format(about['version']))
 
@@ -388,15 +391,17 @@ if __name__ == "__main__":
         regions = [ x for x in args.regions ]
 
     output_file = args.outfile
+    quiet = args.quiet
 
-    print >> sys.stderr, "Python version: {}".format(platform.python_version())
-    print >> sys.stderr, "Multipool version: {}".format(about['version'])
-    print >> sys.stderr, "PySAM version: {}".format(pysam.__version__)
-    print >> sys.stderr, "Input variant file(s): {}".format( os.pathsep.join(input_files) )
-    print >> sys.stderr, "Pool sample: {}".format(pool)
-    print >> sys.stderr, "Founder sample(s): {}".format( ','.join(founders) )
-    print >> sys.stderr, "Region(s): {}".format( ','.join(regions) )
-    print >> sys.stderr, "Output allele depth file: {}".format(output_file)
+    if not quiet:
+        print >> sys.stderr, "Python version: {}".format(platform.python_version())
+        print >> sys.stderr, "Multipool version: {}".format(about['version'])
+        print >> sys.stderr, "PySAM version: {}".format(pysam.__version__)
+        print >> sys.stderr, "Input variant file(s): {}".format( os.pathsep.join(input_files) )
+        print >> sys.stderr, "Pool sample: {}".format(pool)
+        print >> sys.stderr, "Founder sample(s): {}".format( ','.join(founders) )
+        print >> sys.stderr, "Region(s): {}".format( ','.join(regions) )
+        print >> sys.stderr, "Output allele depth file: {}".format(output_file)
 
     for input_file in input_files:
         if not os.path.exists(input_file):
@@ -413,19 +418,25 @@ if __name__ == "__main__":
 
     region = regions[0]
 
-    print >> sys.stderr, "Checking for pool and founder samples in input variant data..."
-    sample_file_info = get_sample_file_info(founders + [pool], input_files)
+    if not quiet:
+        print >> sys.stderr, "Checking for pool and founder samples in input variant data..."
+    sample_file_info = get_sample_file_info(founders + [pool], input_files, quiet=quiet)
 
-    print >> sys.stderr, "Getting founder allele info..."
-    founder_allele_info = get_founder_allele_info(founders, region, sample_file_info)
+    if not quiet:
+        print >> sys.stderr, "Getting founder allele info..."
+    founder_allele_info = get_founder_allele_info(founders, region,
+        sample_file_info, quiet=quiet)
 
-    print >> sys.stderr, "Getting pool allele depths..."
+    if not quiet:
+        print >> sys.stderr, "Getting pool allele depths..."
     allele_depth_info = get_allele_depth_info(pool, region,
-        sample_file_info, founder_allele_info)
+        sample_file_info, founder_allele_info, quiet=quiet)
 
-    print >> sys.stderr, "Writing allele depth file..."
+    if not quiet:
+        print >> sys.stderr, "Writing allele depth file..."
     doOutput(allele_depth_info, output_file)
 
-    print >> sys.stderr, "Done."
+    if not quiet:
+        print >> sys.stderr, "Done."
 
 ################################################################################
