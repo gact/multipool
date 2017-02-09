@@ -95,7 +95,7 @@ def bust_open(name=None, mode='r'):
         if fh is not default_handle:
             fh.close()
 
-def cdl(argument, dtype=unicode):
+def cdl(argument, dtype=str):
     """Validate command-line argument as a comma-delimited list."""
     try:
         values = map( dtype, argument.split(',') )
