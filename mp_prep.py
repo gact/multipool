@@ -186,11 +186,10 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
                     raise RuntimeError("inconsistent allele depth tagsets "
                         "found in pool variant data")
 
-                # Set non-zero allele depths for this variant.
+                # Set allele depths for this variant.
                 for allele, depth in zip(alleles, allele_depths):
-                    if depth > 0:
-                        d.setdefault(contig, defaultdict(lambda: defaultdict(int)))
-                        d[contig][pos][allele] += depth
+                    d.setdefault(contig, defaultdict(lambda: defaultdict(int)))
+                    d[contig][pos][allele] += depth
 
     # Get the allele depth of each pool variant
     # in terms of the matching founder allele.
