@@ -215,8 +215,8 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
                     continue
                 variant_depths.append(allele_depth)
 
-            # Skip if not all founder alleles are represented.
-            if len(variant_depths) != len(founder_alleles):
+            # Skip if founder alleles are not represented.
+            if sum(variant_depths) == 0:
                 continue
 
             # Skip if non-founder alleles are represented.
