@@ -207,12 +207,13 @@ def get_allele_depth_info(pool, region, sample_file_info, founder_allele_info, q
             founder_alleles = founder_allele_info[contig][pos]
 
             # Get variant allele depths with respect to each founder allele.
+            # If allele not observed, set allele depth to zero by default.
             variant_depths = list()
             for founder_allele in founder_alleles:
                 try:
                     allele_depth = d[contig][pos].pop(founder_allele)
                 except KeyError: # no depth available for founder allele
-                    continue
+                    allele_depth = 0
                 variant_depths.append(allele_depth)
 
             # Skip if founder alleles are not represented.
